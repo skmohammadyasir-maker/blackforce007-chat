@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Black Force 007 — Anonymous Public Chat</title>
+<style>
+  :root{--bg:#0f1724;--card:#0b1220;--accent:#0b84ff;--muted:#94a3b8}
+  body{font-family:Inter,ui-sans-serif,system-ui,Arial;margin:0;background:linear-gradient(180deg,#041027,#072033);color:#e6eef8;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:18px}
+  .app{width:100%;max-width:1100px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 6px 24px rgba(2,6,23,0.7);border-radius:12px;overflow:hidden;display:grid;grid-template-columns:320px 1fr;min-height:70vh}
+  aside{padding:16px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));border-right:1px solid rgba(255,255,255,0.03)}
+  main{padding:12px;display:flex;flex-direction:column}
+  h1{font-size:20px;margin:0 0 8px}
+  .rooms{display:flex;flex-direction:column;gap:8px}
+  .room-btn{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:10px;border-radius:8px;color:var(--muted);cursor:pointer;text-align:left}
+  .room-btn.active{background:linear-gradient(90deg,var(--accent),#1b6eff3b);border-color:rgba(11,132,255,0.25);color:white}
+  .userbox{margin-top:12px;padding:10px;border-radius:8px;border:1px dashed rgba(255,255,255,0.03);font-size:13px;color:var(--muted)}
+  .chat-area{display:flex;flex-direction:column;height:100%}
+  .messages{flex:1;overflow:auto;padding:8px;display:flex;flex-direction:column;gap:10px}
+  .msg{padding:10px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.02);max-width:70%}
+  .msg .meta{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .msg.self{margin-left:auto;background:linear-gradient(90deg, rgba(11,132,255,0.08), rgba(27,110,255,0.05));}
+  .composer{display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,255,255,0.02);align-items:center}
+  .composer input[type="text"]{flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+  .btn{padding:10px 12px;border-radius:8px;border:none;background:var(--accent);color:white;cursor:pointer}
+  .subtle{background:transparent;border:1px solid rgba(255,255,255,0.03);color:var(--muted);padding:8px;border-radius:8px;cursor:pointer}
+  .thumb{width:120px;height:80px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,0.04);display:block;margin-top:6px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.02)}
+  .typing{font-size:13px;color:var(--muted);padding-left:8px}
+  .report{font-size:12px;color:#ffb4b4;background:rgba(255,180,180,0.04);padding:6px;border-radius:6px;margin-top:6px;display:inline-block}
+  .adminbar{margin-top:10px;padding:8px;border-radius:8px;background:rgba(255,255,255,0.02);font-size:13px}
+  .support-btn{background:linear-gradient(90deg,#16a34a,#10b981);padding:8px;border-radius:8px;color:white;border:none;cursor:pointer}
+  @media(max-width:900px){.app{grid-template-columns:1fr}aside{order:2}.composer{position:sticky;bottom:0;background:linear-gradient(180deg,#041027,#072033)}}
+</style>
+</head>
+<body>
+<div style="width:100%;max-width:1100px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+  <div>
+    <h1 style="color:#fff;margin:0">Black Force 007 — Anonymous Chat</h1>
+    <div style="color:var(--muted);font-size:13px">ভয় ছাড়া বলো — নাম লুকিয়ে কথা বলো</div>
+  </div>
+  <div>
+    <button id="copyLink" class="subtle">Share Room Link</button>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <aside>
+    <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+      <strong>Rooms</strong>
+      <button id="newRoom" class="subtle">New</button>
+    </div>
+    <div class="rooms" id="roomsList" style="margin-top:10px">
+      <!-- room buttons -->
+    </div>
+
+    <div class="userbox" id="userbox">
+      <div><strong id="anonId">-</strong></div>
+      <div style="font-size:13px;color:var(--muted)">Anonymous ID</div>
+      <div style="margin-top:8px">
+        <button id="beAdmin" class="subtle">Admin Mode</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <div style="font-size:13px;color:var(--muted)">Report Queue</div>
+      <div id="reports" style="margin-top:8px;font-size:13px;color:var(--muted)"></div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div>
+        <strong id="roomTitle">Loading...</strong>
+        <span class="typing" id="typing"></span>
+      </div>
+      <div>
+        <button id="btnSupport" class="support-btn">Support ❤️ <span id="supportCount">0</span></button>
+      </div>
+    </div>
+
+    <div class="chat-area">
+      <div class="messages" id="messages"></div>
+
+      <div class="composer">
+        <input id="text" type="text" placeholder="আপনার বার্তা লিখুন (নাম লুকিয়ে)..." />
+        <input id="file" type="file" accept="image/*" style="display:none" />
+        <button id="imgBtn" class="subtle">Image</button>
+        <button id="send" class="btn">Send</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+<script>
+// ================== CONFIG - Replace with your Firebase config ==================
+const firebaseConfig = {
+  apiKey: "REPLACE_API_KEY",
+  authDomain: "REPLACE_AUTH_DOMAIN",
+  projectId: "REPLACE_PROJECT_ID",
+  storageBucket: "REPLACE_STORAGE_BUCKET",
+  messagingSenderId: "REPLACE_MESSAGING_SENDER_ID",
+  appId: "REPLACE_APP_ID"
+};
+// ==============================================================================
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
+
+// ----------------- Basic profanity list (client-side replacement) -----------------
+const BAD = ["বকা1","বকা2","fword","badword"]; // তোমার ভাষায় আরো শব্দ যোগ করুন
+function cleanText(t){
+  let s = t;
+  BAD.forEach(w=>{
+    const re = new RegExp(w,'gi');
+    s = s.replace(re, '***');
+  });
+  return s;
+}
+
+// ----------------- State -----------------
+let anonId = null;
+let currentRoom = 'general';
+let roomUnsubscribe = null;
+let typingTimeout = null;
+let adminMode = false;
+let blockedAnon = new Set();
+let localReports = [];
+
+// ----------------- UI refs -----------------
+const anonEl = document.getElementById('anonId');
+const roomsList = document.getElementById('roomsList');
+const messagesEl = document.getElementById('messages');
+const roomTitle = document.getElementById('roomTitle');
+const typingEl = document.getElementById('typing');
+const textInput = document.getElementById('text');
+const sendBtn = document.getElementById('send');
+const imgBtn = document.getElementById('imgBtn');
+const fileInput = document.getElementById('file');
+const reportsEl = document.getElementById('reports');
+const supportCountEl = document.getElementById('supportCount');
+
+// ----------------- Init anonymous auth -----------------
+async function initAuth(){
+  auth.onAuthStateChanged(async user=>{
+    if(!user){
+      await auth.signInAnonymously();
+      return;
+    }
+    anonId = 'User-'+user.uid.slice(0,6);
+    anonEl.innerText = anonId;
+    // create user meta doc (optional)
+    await db.collection('users').doc(user.uid).set({
+      anonId, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true});
+    // load rooms
+    renderRooms();
+    joinRoom(currentRoom);
+  });
+}
+initAuth();
+
+// ----------------- Rooms -----------------
+const defaultRooms = ['general','local-problems','support','women-safety','announcements'];
+function renderRooms(){
+  roomsList.innerHTML='';
+  defaultRooms.forEach(r=>{
+    const b = document.createElement('button');
+    b.className='room-btn' + (r===currentRoom ? ' active':'');
+    b.innerText = r.replace('-',' ').toUpperCase();
+    b.onclick = ()=> joinRoom(r);
+    roomsList.appendChild(b);
+  });
+}
+
+// create new room
+document.getElementById('newRoom').onclick = async ()=>{
+  const name = prompt('New room name (single word, no spaces)', 'my-room');
+  if(!name) return;
+  if(defaultRooms.includes(name)) return alert('Already exists');
+  defaultRooms.push(name);
+  await db.collection('rooms').doc(name).set({createdAt: firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+  renderRooms();
+  joinRoom(name);
+};
+
+// ----------------- Join room & listener -----------------
+async function joinRoom(room){
+  if(roomUnsubscribe) roomUnsubscribe();
+  currentRoom = room;
+  roomTitle.innerText = room.replace('-',' ').toUpperCase();
+  renderRooms();
+  messagesEl.innerHTML = '<div style="color:var(--muted);padding:10px">Loading messages...</div>';
+
+  // listen messages
+  const q = db.collection('rooms').doc(room).collection('messages').orderBy('createdAt','asc').limitToLast(200);
+  roomUnsubscribe = q.onSnapshot(snap=>{
+    messagesEl.innerHTML='';
+    snap.forEach(doc=>{
+      const data = doc.data();
+      if(blockedAnon.has(data.anonId)) return; // blocked
+      addMessageEl(doc.id, data, data.anonId===auth.currentUser.uid?true:false);
+    });
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  });
+
+  // typing listener
+  db.collection('rooms').doc(room).onSnapshot(snap=>{
+    const d = snap.data();
+    if(d && d.typing && d.typing.length){
+      typingEl.innerText = d.typing.join(', ') + ' typing...';
+    }else typingEl.innerText = '';
+  });
+
+  // support count
+  db.collection('rooms').doc(room).get().then(snap=>{
+    const d = snap.data();
+    supportCountEl.innerText = d && d.support? d.support: 0;
+  });
+}
+
+// ----------------- Send message -----------------
+sendBtn.onclick = async ()=>{
+  const txt = textInput.value.trim();
+  if(!txt && !fileInput.files.length) return;
+  const clean = cleanText(txt);
+  const uid = auth.currentUser.uid;
+  const msg = {
+    text: clean||'',
+    anonId: uid,
+    nameTag: anonId,
+    room: currentRoom,
+    supports: 0,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  // handle image
+  if(fileInput.files.length){
+    const file = fileInput.files[0];
+    const path = `rooms/${currentRoom}/${Date.now()}_${file.name}`;
+    const ref = storage.ref().child(path);
+    await ref.put(file);
+    const url = await ref.getDownloadURL();
+    msg.image = url;
+  }
+  await db.collection('rooms').doc(currentRoom).collection('messages').add(msg);
+  textInput.value=''; fileInput.value='';
+  // update last message time
+  await db.collection('rooms').doc(currentRoom).set({lastActive: firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+};
+
+// image button
+imgBtn.onclick = ()=> fileInput.click();
+
+// file preview (optional)
+fileInput.onchange = ()=> {
+  if(fileInput.files.length){
+    // show preview maybe
+  }
+};
+
+// ----------------- Render message element -----------------
+function addMessageEl(id, data, self=false){
+  const wrap = document.createElement('div');
+  wrap.className = 'msg' + (self? ' self':'');
+  const meta = document.createElement('div');
+  meta.className='meta';
+  const time = data.createdAt && data.createdAt.toDate ? timeAgo(data.createdAt.toDate()) : 'just now';
+  meta.innerText = `${data.nameTag || 'Anonymous'} • ${time}`;
+  wrap.appendChild(meta);
+  if(data.text) {
+    const p = document.createElement('div');
+    p.innerHTML = escapeHtml(data.text);
+    wrap.appendChild(p);
+  }
+  if(data.image){
+    const img = document.createElement('img');
+    img.src = data.image; img.className='thumb';
+    wrap.appendChild(img);
+  }
+  // actions
+  const actions = document.createElement('div');
+  actions.style.marginTop='8px';
+  actions.innerHTML = `
+    <button class="subtle" onclick="supportMsg('${id}')">Support (${data.supports||0})</button>
+    <button class="subtle" onclick="reportMsg('${id}','${data.anonId}')">Report</button>
+    <button class="subtle" onclick="blockAnon('${data.anonId}')">Block</button>
+    ${adminMode? `<button class="subtle" onclick="deleteMsg('${id}')">Delete</button>`:''}
+  `;
+  wrap.appendChild(actions);
+  messagesEl.appendChild(wrap);
+}
+
+// ----------------- Helpers (support/report/block/delete) -----------------
+window.supportMsg = async (msgId)=>{
+  const ref = db.collection('rooms').doc(currentRoom).collection('messages').doc(msgId);
+  await db.runTransaction(async t=>{
+    const doc = await t.get(ref);
+    if(!doc.exists) return;
+    const n = (doc.data().supports||0)+1;
+    t.update(ref, {supports: n});
+    // update room support count
+    const roomRef = db.collection('rooms').doc(currentRoom);
+    const rdoc = await t.get(roomRef);
+    const rc = (rdoc.exists && rdoc.data().support) ? rdoc.data().support + 1 : 1;
+    t.set(roomRef, {support: rc},{merge:true});
+  });
+};
+
+window.reportMsg = async (msgId, anon)=>{
+  localReports.push({room: currentRoom, msgId, anon, createdAt: new Date().toISOString()});
+  // store in reports collection for admin review
+  await db.collection('reports').add({room: currentRoom, msgId, anonId: anon, createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+  renderReports();
+  alert('Reported. Admin will review.');
+};
+
+window.blockAnon = (anon)=>{
+  if(!anon) return;
+  blockedAnon.add(anon);
+  alert('Blocked anon: '+anon);
+  renderMessagesFiltered();
+};
+
+window.deleteMsg = async (msgId)=>{
+  if(!confirm('Delete message?')) return;
+  await db.collection('rooms').doc(currentRoom).collection('messages').doc(msgId).delete();
+  alert('Deleted');
+};
+
+// render reports
+function renderReports(){
+  reportsEl.innerHTML = '';
+  if(localReports.length===0) reportsEl.innerText = 'No reports';
+  localReports.slice(-5).forEach(r=>{
+    const d = document.createElement('div');
+    d.innerText = `${r.room} • ${r.msgId} • ${r.createdAt}`;
+    reportsEl.appendChild(d);
+  });
+}
+
+// re-render messages after block
+function renderMessagesFiltered(){
+  // reload snapshot already filters blocked in listener, so just refresh UI
+  messagesEl.innerHTML='';
+  // listener will re-populate
+}
+
+// ----------------- Typing indicator -----------------
+textInput.addEventListener('input', ()=>{
+  const uid = auth.currentUser.uid;
+  const roomRef = db.collection('rooms').doc(currentRoom);
+  roomRef.set({typing: firebase.firestore.FieldValue.arrayUnion(anonId)},{merge:true});
+  if(typingTimeout) clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(()=>{
+    roomRef.set({typing: firebase.firestore.FieldValue.arrayRemove(anonId)},{merge:true});
+  },2000);
+});
+
+// ----------------- utility: escape html & timeago -----------------
+function escapeHtml(s){ return s.replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; }); }
+function timeAgo(d){
+  const s = Math.floor((Date.now()-d.getTime())/1000);
+  if(s<10) return 'just now';
+  if(s<60) return s+'s';
+  if(s<3600) return Math.floor(s/60)+'m';
+  if(s<86400) return Math.floor(s/3600)+'h';
+  return Math.floor(s/86400)+'d';
+}
+
+// ----------------- Admin mode via secret key in URL -----------------
+document.getElementById('beAdmin').onclick = ()=>{
+  const key = prompt('Enter admin key (set in code or Firebase)');
+  if(key===null) return;
+  // for demo we accept 'letmein'
+  if(key==='letmein'){ adminMode=true; alert('Admin mode ON'); document.querySelectorAll('.subtle').forEach(b=>b.style.border='1px solid rgba(255,0,0,0.2)'); }
+  else alert('Wrong key');
+};
+
+// ----------------- copy room link
+document.getElementById('copyLink').onclick = ()=>{
+  const url = location.origin + location.pathname + '?room='+currentRoom;
+  navigator.clipboard.writeText(url);
+  alert('Room link copied');
+};
+
+// ----------------- support button
+document.getElementById('btnSupport').onclick = async ()=>{
+  // increment room support
+  const r = db.collection('rooms').doc(currentRoom);
+  await db.runTransaction(async t=>{
+    const doc = await t.get(r);
+    const n = (doc.exists && doc.data().support)? doc.data().support+1:1;
+    t.set(r, {support: n},{merge:true});
+  });
+  const snap = await db.collection('rooms').doc(currentRoom).get();
+  supportCountEl.innerText = snap.data().support || 0;
+  alert('Thanks for support!');
+};
+
+// ----------------- URL param join
+window.addEventListener('load', ()=>{
+  const p = new URLSearchParams(location.search);
+  const r = p.get('room');
+  if(r) joinRoom(r);
+});
+
+// ----------------- Auto prune (client-triggered) - optional
+// This will delete messages older than X days if client with adminMode runs it.
+// Server-side scheduled cleanup preferred (Cloud Function).
+async function pruneOldMessages(days=30){
+  if(!adminMode) return;
+  const cutoff = new Date(Date.now() - days*24*3600*1000);
+  const snap = await db.collection('rooms').doc(currentRoom).collection('messages').where('createdAt','<', cutoff).get();
+  const batch = db.batch();
+  snap.forEach(d=> batch.delete(d.ref));
+  await batch.commit();
+  alert('Pruned old messages');
+}
+
+// ----------------- start
+renderReports();
+</script>
+</body>
+</html>
